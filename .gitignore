@@ -52,5 +52,5 @@ Mkfile.old
 dkms.conf
 *.swp
 
-*/build
+build
 *~
