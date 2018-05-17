@@ -90,5 +90,80 @@ dump_mbuf(const struct rte_mbuf* m)
 	printf("next    : %p\n", m->next);
 }
 
+inline static void
+port_init(uint16_t port, struct rte_mempool *mbuf_pool, const struct rte_eth_conf* port_conf)
+{
+	uint16_t nb_rxd = 128;
+	uint16_t nb_txd = 512;
+
+	if (port >= rte_eth_dev_count()) {
+		printf("port number is invalid\n");
+		exit(1);
+	}
+
+	/* Configure the Ethernet device. */
+	const uint16_t rx_rings = 1;
+	const uint16_t tx_rings = 1;
+	int retval = rte_eth_dev_configure(port, rx_rings, tx_rings, port_conf);
+	if (retval != 0) {
+		printf("rte_eth_dev_configure\n");
+		exit(1);
+	}
+
+	retval = rte_eth_dev_adjust_nb_rx_tx_desc(port, &nb_rxd, &nb_txd);
+	if (retval != 0) {
+		printf("rte_eth_dev_adjust_nb_rx_tx_desc\n");
+		exit(1);
+	}
+
+	for (uint16_t q = 0; q < rx_rings; q++) {
+		retval = rte_eth_rx_queue_setup(port, q, nb_rxd,
+				rte_eth_dev_socket_id(port), NULL, mbuf_pool);
+		if (retval != 0) {
+			printf("rte_eth_rx_queue_setup\n");
+			exit(1);
+		}
+	}
+
+	for (uint16_t q = 0; q < tx_rings; q++) {
+		retval = rte_eth_tx_queue_setup(port, q, nb_txd,
+				rte_eth_dev_socket_id(port), NULL);
+		if (retval != 0) {
+			printf("rte_eth_tx_queue_setup\n");
+			exit(1);
+		}
+	}
+
+	/* Start the Ethernet port. */
+	retval = rte_eth_dev_start(port);
+	if (retval != 0) {
+		printf("rte_eth_dev_start\n");
+		exit(1);
+	}
+
+	/* Display the port MAC address. */
+	struct ether_addr addr;
+	rte_eth_macaddr_get(port, &addr);
+	printf("Port %u MAC: %02" PRIx8 " %02" PRIx8 " %02" PRIx8
+			   " %02" PRIx8 " %02" PRIx8 " %02" PRIx8 "\n",
+			port,
+			addr.addr_bytes[0], addr.addr_bytes[1],
+			addr.addr_bytes[2], addr.addr_bytes[3],
+			addr.addr_bytes[4], addr.addr_bytes[5]);
+
+	/* Enable RX in promiscuous mode for the Ethernet device. */
+	rte_eth_promiscuous_enable(port);
+}
+
+inline static void 
+wrte_eal_init(int argc, char** argv)
+{
+	int ret = rte_eal_init(argc, argv);
+	if (ret < 0) {
+		printf("rte_eal_init\n");
+		exit(1);
+	}
+}
+
 #endif /* _DPDKW_DPDKW_H_ */
 
