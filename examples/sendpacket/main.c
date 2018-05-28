@@ -9,9 +9,9 @@ static const struct rte_eth_conf port_conf_default = {
 	.rxmode = { .max_rx_pkt_len = ETHER_MAX_LEN }
 };
 
-uint8_t data[1004] = {
+uint8_t data[1000] = {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // ether dst
-		0xee, 0xee, 0xee, 0xee, 0xee, 0xee, // ether src
+		0x50, 0x6b, 0x4b, 0xb6, 0xc8, 0xf9, // ether src
 		0xee, 0xee,                         // ether type
 
 		/* data */
@@ -32,6 +32,7 @@ int main(int argc, char *argv[])
 	wrte_eal_init(argc, argv);
 
 	uint32_t nb_ports = rte_eth_dev_count();
+	printf("%u ports found \n", nb_ports);
 	if (nb_ports == 0)
 		rte_exit(EXIT_FAILURE, "Error: number of ports must be even\n");
 
@@ -62,7 +63,7 @@ int main(int argc, char *argv[])
   wrte_pktmbuf_chain(m, m_0x33);
   wrte_pktmbuf_chain(m, m_0x44);
   wrte_pktmbuf_chain(m, m_0x55);
-  wrte_pktmbuf_chain(m, m_0x66);
+  // wrte_pktmbuf_chain(m, m_0x66);
   wrte_pktmbuf_chain(m, m_last);
 
 	while (!wrte_eth_link_is_up(0)) {
@@ -73,7 +74,7 @@ int main(int argc, char *argv[])
 	printf("\n");
 	rte_pktmbuf_dump(stdout, m, 0);
 
-	ret = rte_eth_tx_burst(0, 0, &m, 1);
+	int ret = rte_eth_tx_burst(0, 0, &m, 1);
 	if (ret != 1) {
 		printf("error ocure\n");
 		exit(1);
