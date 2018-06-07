@@ -16,8 +16,8 @@
 static struct rte_eth_conf port_conf_default = {
 	.rxmode = {
 		.max_rx_pkt_len = 1500,
-		.jumbo_frame    = 1, 
-		.enable_scatter = 1,
+		//.jumbo_frame    = 1, 
+		//.enable_scatter = 1,
 	},
 };
 
@@ -83,23 +83,45 @@ lcore_main(void)
 			rte_lcore_id());
 
 	for (;;) {
-		for (port = 2; port < 4; port++) {
+		for (port = 0; port < 2; port++) {
 
 			struct rte_mbuf *bufs[BURST_SIZE];
 			const uint16_t nb_rx = rte_eth_rx_burst(port, 0, bufs, BURST_SIZE);
 			if (unlikely(nb_rx == 0)) continue;
 
 			for (uint16_t i=0; i<nb_rx; i++) {
-				printf("recv packet len=%u \n", rte_pktmbuf_pkt_len(bufs[i]));			
-				rte_pktmbuf_dump(stdout, bufs[i], 0);
+				// printf("recv packet len=%u \n", rte_pktmbuf_pkt_len(bufs[i]));			
+				// rte_pktmbuf_dump(stdout, bufs[i], 0);
 
+#if 1
 				/*
-				 * Transmit Mirror Packets
+				 * Transmit Mirror Packets (Clone Version)
 				 */
-				// struct rte_mbuf* cloned_mbuf = rte_pktmbuf_alloc(mbuf_pool);
 				struct rte_mbuf* cloned_mbuf = rte_pktmbuf_clone(bufs[i], mbuf_pool);
-				const uint16_t n_mrr_tx = rte_eth_tx_burst(0, 0, &cloned_mbuf, 1);
-				if (unlikely(n_mrr_tx != 1)) rte_pktmbuf_free(cloned_mbuf);
+        cloned_mbuf->pkt_len = rte_pktmbuf_data_len(bufs[i]);
+        cloned_mbuf->data_len = rte_pktmbuf_data_len(bufs[i]);
+				const uint16_t n_mrr_tx = rte_eth_tx_burst(2, 0, &cloned_mbuf, 1);
+				if (unlikely(n_mrr_tx != 1)) {
+          printf("mirror tx erro\n");
+          rte_pktmbuf_free(cloned_mbuf);
+        }
+#else 
+        /*
+         * Transmit Mirror Packets (Copy Version)
+         */
+				struct rte_mbuf* cloned_mbuf = rte_pktmbuf_alloc(mbuf_pool);
+        rte_memcpy(
+          rte_pktmbuf_mtod(cloned_mbuf, uint8_t*),
+          rte_pktmbuf_mtod(bufs[i], uint8_t*),
+          rte_pktmbuf_data_len(bufs[i]));
+        cloned_mbuf->pkt_len = rte_pktmbuf_data_len(bufs[i]);
+        cloned_mbuf->data_len = rte_pktmbuf_data_len(bufs[i]);
+				const uint16_t n_mrr_tx = rte_eth_tx_burst(2, 0, &cloned_mbuf, 1);
+				if (unlikely(n_mrr_tx != 1)) {
+          printf("mirror tx erro\n");
+          rte_pktmbuf_free(cloned_mbuf);
+        }
+#endif
 
 				/*
 				 * Transmit FWD Packets

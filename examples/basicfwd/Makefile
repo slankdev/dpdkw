@@ -16,7 +16,9 @@ EXTRA_CFLAGS += -O3 -g -Wfatal-errors
 include $(RTE_SDK)/mk/rte.extapp.mk
 
 run: 
-	./build/out
+	./build/out \
+    -w 18:00.0 \
+    -w 3b:00.0 
 
 gdb:
 	gdb ./build/out

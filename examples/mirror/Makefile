@@ -17,10 +17,10 @@ include $(RTE_SDK)/mk/rte.extapp.mk
 
 run: 
 	./build/out \
-		-w 04:00.0 \
-		-w 04:00.1 \
-		-w 06:00.0 \
-		-w 06:00.1
+		-w 18:00.0 \
+		-w 3b:00.0 \
+		-w d8:00.0 \
+		-w d8:00.1
 
 gdb:
 	gdb ./build/out
