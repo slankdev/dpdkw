@@ -16,7 +16,7 @@
 static struct rte_eth_conf port_conf_default = {
 	.rxmode = {
 		.max_rx_pkt_len = 9000,
-		.jumbo_frame    = 1, 
+		.jumbo_frame    = 1,
 		.enable_scatter = 1,
 	},
 };
@@ -25,7 +25,7 @@ static inline int
 port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 {
 	struct rte_eth_conf port_conf = port_conf_default;
-	const uint16_t rx_rings = 1, tx_rings = 1;
+	const uint16_t rx_rings = 2, tx_rings = 4;
 	uint16_t nb_rxd = RX_RING_SIZE;
 	uint16_t nb_txd = TX_RING_SIZE;
 	int retval;
@@ -82,22 +82,26 @@ lcore_main(void)
 
 	for (;;) {
 		for (port = 0; port < nb_ports; port++) {
+      for (uint16_t qid=0; qid<2; qid++) {
 
-			struct rte_mbuf *bufs[BURST_SIZE];
-			const uint16_t nb_rx = rte_eth_rx_burst(port, 0, bufs, BURST_SIZE);
-			if (unlikely(nb_rx == 0)) continue;
+        struct rte_mbuf *bufs[BURST_SIZE];
+        const uint16_t nb_rx = rte_eth_rx_burst(port, qid, bufs, BURST_SIZE);
+        if (unlikely(nb_rx == 0)) continue;
 
-			for (uint16_t i=0; i<nb_rx; i++) {
-				printf("recv packet len=%u \n", rte_pktmbuf_pkt_len(bufs[i]));			
-				rte_pktmbuf_dump(stdout, bufs[i], 0);
-			}
+        for (uint16_t i=0; i<nb_rx; i++) {
+          printf("port%u:%u recv packet len=%u \n",
+              port, qid, rte_pktmbuf_pkt_len(bufs[i]));
+          /* rte_pktmbuf_dump(stdout, bufs[i], 0); */
+        }
 
-			const uint16_t nb_tx = rte_eth_tx_burst(port ^ 1, 0, bufs, nb_rx);
-			if (unlikely(nb_tx < nb_rx)) {
-				uint16_t buf;
-				for (buf = nb_tx; buf < nb_rx; buf++)
-					rte_pktmbuf_free(bufs[buf]);
-			}
+        const uint16_t nb_tx = rte_eth_tx_burst(port ^ 1, qid, bufs, nb_rx);
+        if (unlikely(nb_tx < nb_rx)) {
+          uint16_t buf;
+          for (buf = nb_tx; buf < nb_rx; buf++)
+            rte_pktmbuf_free(bufs[buf]);
+        }
+
+      }
 		}
 	}
 }
